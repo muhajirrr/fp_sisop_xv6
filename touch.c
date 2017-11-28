@@ -11,7 +11,9 @@ int main(int argc, char *argv[]) {
 	} else {
 		int i;
 		for (i = 1; i < argc; i++) {
-			open(argv[i], O_CREAT);
+			if (open(argv[i], O_CREAT) == -1) {
+				printf(2,"creating file failed..\n");
+			}
 		}
 	}
 
