@@ -164,8 +164,16 @@ main(void)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
+
+    int buflen = strlen(buf);
+    char *temp = (char *) malloc(buflen+1);
+    temp[0] = '/';
+    int i;
+    for (i = 1; i < buflen; i++) {
+        temp[i] = buf[i-1];
+    }
     if(fork1() == 0)
-      runcmd(parsecmd(buf));
+      runcmd(parsecmd(temp));
     wait();
   }
   exit();
