@@ -1,6 +1,6 @@
 #include "types.h"
-#include "stat.h"
 #include "user.h"
+#include "stat.h"
 #include "fcntl.h"
 
 char *getFileName(char *s) {
@@ -18,13 +18,13 @@ char *getFileName(char *s) {
 	return filename;
 }
 
-void copy_one(char *src, char *dest) {
+void move_one(char *src, char *dest) {
 	int input, output, i, n;
 	char buffer[1024];
 	char *filename = getFileName(src);
 
 	if ((input = open(src, O_RDONLY)) < 0) {
-		printf(1, "cp: cannot open%s\n", src);
+		printf(1, "mv: cannot open %s\n", src);
 		exit();
 	}
 
@@ -42,7 +42,7 @@ void copy_one(char *src, char *dest) {
 			dir[i] = filename[i-dest_len];
 
 		if ((output = open(dir, O_CREATE|O_RDWR)) < 0) {
-			printf(1, "cp: cannot open %s\n", dest);
+			printf(1, "mv: cannot open %s\n", dest);
 			exit();
 		}
 	}
@@ -53,6 +53,8 @@ void copy_one(char *src, char *dest) {
 
 	close(input);
 	close(output);
+
+	unlink(src);
 }
 
 int main(int argc, char *argv[]) {
@@ -61,11 +63,11 @@ int main(int argc, char *argv[]) {
 		printf(1, "help..\n");
 		exit();
 	} else if (argc < 3) {
-		printf(1, "cp: missing destination file operand after %s\n", argv[1]);
+		printf(1, "mv: missing destination file operand after '%s'\n", argv[1]);
 		exit();
 	}
 
-	copy_one(argv[1], argv[2]);
+	move_one(argv[1], argv[2]);
 
 	exit();
 }
