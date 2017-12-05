@@ -2,10 +2,10 @@ List command to be implemented:
 
 - [x] cp
 - [ ] cp -R
-- [ ] cp *
+- [x] cp *
 - [x] ls
 - [x] mv
-- [ ] mv *
+- [x] mv *
 - [x] touch
 - [x] rm
 - [ ] rm -rf
