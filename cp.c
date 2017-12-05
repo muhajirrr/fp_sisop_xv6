@@ -2,6 +2,7 @@
 #include "stat.h"
 #include "user.h"
 #include "fcntl.h"
+#include "fs.h"
 
 char *getFileName(char *s) {
 	char *filename = s;
@@ -24,7 +25,7 @@ void copy_one(char *src, char *dest) {
 	char *filename = getFileName(src);
 
 	if ((input = open(src, O_RDONLY)) < 0) {
-		printf(1, "cp: cannot open%s\n", src);
+		printf(1, "cp: cannot open %s\n", src);
 		exit();
 	}
 
@@ -55,6 +56,51 @@ void copy_one(char *src, char *dest) {
 	close(output);
 }
 
+void copy_all(char *path) {
+	char buf[512], *p;
+	int fd;
+	struct dirent de;
+	struct stat st;
+
+	if((fd = open(".", 0)) < 0){
+		printf(2, "cp: cannot open %s\n", ".");
+		return;
+	}
+
+	if(fstat(fd, &st) < 0){
+		printf(2, "cp: cannot stat %s\n", ".");
+		close(fd);
+		return;
+	}
+
+	switch(st.type) {
+		case T_DIR:
+			if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
+				printf(1, "cp: path too long\n");
+				break;
+			}
+
+			strcpy(buf, ".");
+			p = buf+strlen(buf);
+			*p = '/';
+			p++;
+
+			while(read(fd, &de, sizeof(de)) == sizeof(de)) {
+				if(de.inum == 0 || de.name[0] == '.')
+					continue;
+
+				memmove(p, de.name, DIRSIZ);
+				p[DIRSIZ] = 0;
+
+				copy_one(buf, path);
+			}
+
+			break;
+	}
+
+	close(fd);
+}
+
 int main(int argc, char *argv[]) {
 
 	if (argc < 2) {
@@ -65,7 +111,10 @@ int main(int argc, char *argv[]) {
 		exit();
 	}
 
-	copy_one(argv[1], argv[2]);
+	if (!strcmp(argv[1], "*"))
+		copy_all(argv[2]);
+	else
+		copy_one(argv[1], argv[2]);
 
 	exit();
 }
