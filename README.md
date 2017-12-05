@@ -1,15 +1,15 @@
 List command to be implemented:
 
-[ ] cp
-[ ] cp -R
-[ ] cp *
-[ ] ls
-[ ] mv
-[ ] mv *
-[ ] touch
-[ ] rm
-[ ] rm -rf
-[ ] cd
-[ ] split
-[ ] env
-[ ] find
+- [x] cp
+- [ ] cp -R
+- [ ] cp *
+- [x] ls
+- [x] mv
+- [ ] mv *
+- [x] touch
+- [x] rm
+- [ ] rm -rf
+- [x] cd
+- [ ] split
+- [ ] env
+- [ ] find
