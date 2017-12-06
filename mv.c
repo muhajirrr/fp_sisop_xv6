@@ -88,11 +88,17 @@ void move_all(char *path) {
 			p++;
 
 			while(read(fd, &de, sizeof(de)) == sizeof(de)) {
-				if(de.inum == 0 || de.name[0] == '.')
+				if(de.inum == 0 || !strcmp(de.name, ".") || !strcmp(de.name, ".."))
 					continue;
 
 				memmove(p, de.name, DIRSIZ);
 				p[DIRSIZ] = 0;
+
+				fstat(open(buf, O_RDONLY), &st);
+				if (st.type == T_DIR) {
+					printf(1, "mv: -r not specified; omitting directory '%s'\n", buf);
+					continue;
+				}
 
 				move_one(buf, path);
 			}
