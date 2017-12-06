@@ -3,7 +3,7 @@
 Command to be implemented:
 
 - [x] cp
-- [ ] cp -R
+- [x] cp -R
 - [x] cp *
 - [x] ls
 - [x] mv
