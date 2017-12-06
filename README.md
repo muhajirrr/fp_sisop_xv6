@@ -1,4 +1,6 @@
-List command to be implemented:
+# XV6 - FPB02
+
+Command to be implemented:
 
 - [x] cp
 - [ ] cp -R
@@ -8,7 +10,7 @@ List command to be implemented:
 - [x] mv *
 - [x] touch
 - [x] rm
-- [ ] rm -rf
+- [x] rm -rf
 - [x] cd
 - [ ] split
 - [ ] env
