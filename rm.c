@@ -32,13 +32,13 @@ void rm_recurse(char *dir) {
 			p++;
 
 			while(read(fd, &de, sizeof(de)) == sizeof(de)) {
-				if(de.inum == 0 || de.name[0] == '.')
+				if(de.inum == 0 || !strcmp(de.name, ".") || !strcmp(de.name, ".."))
 					continue;
 
-				memmove(p, de.name, DIRSIZ);
-				p[DIRSIZ] = 0;
+				memmove(p, de.name, strlen(de.name));
+				p[strlen(de.name)] = 0;
 
-				fstat(fd, &st);
+				fstat(open(buf, O_RDONLY), &st);
 				if (st.type == T_FILE) 
 					rm_one(buf);
 				else if (st.type == T_DIR)
@@ -63,7 +63,9 @@ int main(int argc, char *argv[])
 	}
 
 	if (!strcmp(argv[1], "-rf")) {
-		rm_recurse(argv[2]);
+		for (i = 2; i < argc; i++) {
+			rm_recurse(argv[2]);
+		}
 	} else {
 		for(i = 1; i < argc; i++){
 			rm_one(argv[i]);

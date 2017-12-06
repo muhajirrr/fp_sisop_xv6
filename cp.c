@@ -26,7 +26,7 @@ void copy_one(char *src, char *dest) {
 
 	if ((input = open(src, O_RDONLY)) < 0) {
 		printf(1, "cp: cannot open %s\n", src);
-		exit();
+		return;
 	}
 
 	if ((output = open(dest, O_CREATE|O_RDWR)) < 0) {
@@ -44,7 +44,7 @@ void copy_one(char *src, char *dest) {
 
 		if ((output = open(dir, O_CREATE|O_RDWR)) < 0) {
 			printf(1, "cp: cannot open %s\n", dest);
-			exit();
+			return;
 		}
 	}
 
@@ -86,11 +86,17 @@ void copy_all(char *path) {
 			p++;
 
 			while(read(fd, &de, sizeof(de)) == sizeof(de)) {
-				if(de.inum == 0 || de.name[0] == '.')
+				if(de.inum == 0 || !strcmp(de.name, ".") || !strcmp(de.name, ".."))
 					continue;
 
 				memmove(p, de.name, DIRSIZ);
 				p[DIRSIZ] = 0;
+
+				fstat(open(buf, O_RDONLY), &st);
+				if (st.type == T_DIR) {
+					printf(1, "cp: -r not specified; omitting directory '%s'\n", buf);
+					continue;
+				}
 
 				copy_one(buf, path);
 			}
@@ -99,6 +105,67 @@ void copy_all(char *path) {
 	}
 
 	close(fd);
+}
+
+void copy_recurse(char *src, char *dest) {
+	int fs;
+	char *p, buf[512], bufdir[512], *d;
+	struct dirent de;
+	struct stat st;
+
+	if ((fs = open(src, O_RDONLY)) < 0) {
+		printf(2, "cp: cannot open %s\n", src);
+		return;
+	}
+
+	if (fstat(fs, &st) < 0) {
+		printf(2, "cp: cannot stat %s\n", src);
+		close(fs);
+		return;
+	}
+
+	if (st.type == T_FILE) {
+		copy_one(src, dest);
+	} else if (st.type == T_DIR) {
+		if(strlen(src) + 1 + DIRSIZ + 1 > sizeof buf) {
+			printf(1, "cp: path too long\n");
+			return;
+		}
+
+		char *tmp = getFileName(src);
+		strcpy(bufdir, dest);
+		d = bufdir+strlen(bufdir)-1;
+		if (strcmp(d, "/")) {
+			d++;
+			*d = '/';
+		}
+		d++;
+		memmove(d, tmp, strlen(tmp));
+		d[strlen(tmp)] = 0;
+
+		printf(1, "dir: %s\n", tmp);
+		printf(1, "mkdir: %s\n", bufdir);
+		mkdir(bufdir);
+
+		strcpy(buf, src);
+		p = buf+strlen(buf);
+		*p = '/';
+		p++;
+
+		while(read(fs, &de, sizeof(de)) == sizeof(de)) {
+			if(de.inum == 0 || !strcmp(de.name, ".") || !strcmp(de.name, ".."))
+				continue;
+
+			memmove(p, de.name, strlen(de.name));
+			p[strlen(de.name)] = 0;
+
+			fstat(open(buf, O_RDONLY), &st);
+			if (st.type == T_FILE)
+				copy_one(buf, bufdir);
+			else if (st.type == T_DIR)
+				copy_recurse(buf, bufdir);
+		}
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -113,6 +180,8 @@ int main(int argc, char *argv[]) {
 
 	if (!strcmp(argv[1], "*"))
 		copy_all(argv[2]);
+	else if (!strcmp(argv[1], "-r"))
+		copy_recurse(argv[2], argv[3]);
 	else
 		copy_one(argv[1], argv[2]);
 
