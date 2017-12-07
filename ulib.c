@@ -33,6 +33,19 @@ strlen(char *s)
   return n;
 }
 
+char* strcat(char *s, char *t) {
+  char *os = s;
+
+  s += strlen(s);
+  while((*t)) {
+    *s++ = *t++;
+  }
+
+  *s = 0;
+
+  return os;
+}
+
 void*
 memset(void *dst, int c, uint n)
 {

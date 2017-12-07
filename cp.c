@@ -19,89 +19,84 @@ char *getFileName(char *s) {
 	return filename;
 }
 
+int isDirectory(char *s) {
+	struct stat st;
+
+	int fd = open(s, O_RDONLY);
+	fstat(fd, &st);
+	int res;
+
+	if (st.type == T_DIR) 
+		res = 1;
+	else
+		res = 0;
+
+	close(fd);
+	return res;
+}
+
 void copy_one(char *src, char *dest) {
-	int input, output, i, n;
-	char buffer[1024];
-	char *filename = getFileName(src);
+	int fs, fd, n;
+	char buffer[512];
 
-	if ((input = open(src, O_RDONLY)) < 0) {
-		printf(1, "cp: cannot open %s\n", src);
+	if (isDirectory(src)) {
+		printf(1, "cp: -r not specified; omitting directory '%s'\n", src);
 		return;
-	}
+	} else {
+		char *newdest = (char *) malloc(strlen(getFileName(src))+strlen(dest)+2);
+		strcpy(newdest, dest);
 
-	if ((output = open(dest, O_CREATE|O_RDWR)) < 0) {
-		int dest_len = strlen(dest);
-		int filename_len = strlen(filename);
+		if (isDirectory(dest)) {
+			if (dest[strlen(dest)-1] != '/') strcat(newdest, "/");
 
-		char *dir = (char *) malloc(dest_len+filename_len+2);
-		for (i = 0; i < dest_len; i++) dir[i] = dest[i];
-		if (dir[dest_len-1] != '/') {
-			dir[dest_len] = '/';
-			dest_len++;
+			strcat(newdest, getFileName(src));
+		} else if (dest[strlen(dest)-1] == '/') {
+			printf(1, "cp: %s is not a directory\n", dest);
+			return;
 		}
-		for (i = dest_len; i < dest_len+filename_len; i++)
-			dir[i] = filename[i-dest_len];
 
-		if ((output = open(dir, O_CREATE|O_RDWR)) < 0) {
+		if ((fs = open(src, O_RDONLY)) < 0) {
+			printf(1, "cp: cannot open %s\n", src);
+			return;
+		}
+
+		if ((fd = open(newdest, O_CREATE|O_RDWR)) < 0) {
 			printf(1, "cp: cannot open %s\n", dest);
 			return;
 		}
-	}
 
-	while ((n = read(input, buffer, sizeof(buffer))) > 0) {
-		write(output, buffer, n);
-	}
+		while ((n = read(fs, buffer, sizeof(buffer))) > 0) {
+			write(fd, buffer, n);
+		}
 
-	close(input);
-	close(output);
+		close(fs);
+		close(fd);
+	}
 }
 
 void copy_all(char *path) {
 	char buf[512], *p;
 	int fd;
 	struct dirent de;
-	struct stat st;
 
 	if((fd = open(".", 0)) < 0){
 		printf(2, "cp: cannot open %s\n", ".");
 		return;
 	}
 
-	if(fstat(fd, &st) < 0){
-		printf(2, "cp: cannot stat %s\n", ".");
-		close(fd);
-		return;
-	}
+	strcpy(buf, ".");
+	p = buf+strlen(buf);
+	*p = '/';
+	p++;
 
-	switch(st.type) {
-		case T_DIR:
-			if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf) {
-				printf(1, "cp: path too long\n");
-				break;
-			}
+	while(read(fd, &de, sizeof(de)) == sizeof(de)) {
+		if(de.inum == 0 || !strcmp(de.name, ".") || !strcmp(de.name, ".."))
+			continue;
 
-			strcpy(buf, ".");
-			p = buf+strlen(buf);
-			*p = '/';
-			p++;
+		memmove(p, de.name, DIRSIZ);
+		p[DIRSIZ] = 0;
 
-			while(read(fd, &de, sizeof(de)) == sizeof(de)) {
-				if(de.inum == 0 || !strcmp(de.name, ".") || !strcmp(de.name, ".."))
-					continue;
-
-				memmove(p, de.name, DIRSIZ);
-				p[DIRSIZ] = 0;
-
-				fstat(open(buf, O_RDONLY), &st);
-				if (st.type == T_DIR) {
-					printf(1, "cp: -r not specified; omitting directory '%s'\n", buf);
-					continue;
-				}
-
-				copy_one(buf, path);
-			}
-
-			break;
+		copy_one(buf, path);
 	}
 
 	close(fd);
@@ -109,42 +104,21 @@ void copy_all(char *path) {
 
 void copy_recurse(char *src, char *dest) {
 	int fs;
-	char *p, buf[512], bufdir[512], *d;
+	char *p, buf[512], bufdir[512];
 	struct dirent de;
-	struct stat st;
 
 	if ((fs = open(src, O_RDONLY)) < 0) {
 		printf(2, "cp: cannot open %s\n", src);
 		return;
 	}
 
-	if (fstat(fs, &st) < 0) {
-		printf(2, "cp: cannot stat %s\n", src);
-		close(fs);
-		return;
-	}
-
-	if (st.type == T_FILE) {
+	if (!isDirectory(src)) {
 		copy_one(src, dest);
-	} else if (st.type == T_DIR) {
-		if(strlen(src) + 1 + DIRSIZ + 1 > sizeof buf) {
-			printf(1, "cp: path too long\n");
-			return;
-		}
-
-		char *tmp = getFileName(src);
+	} else {
 		strcpy(bufdir, dest);
-		d = bufdir+strlen(bufdir)-1;
-		if (strcmp(d, "/")) {
-			d++;
-			*d = '/';
-		}
-		d++;
-		memmove(d, tmp, strlen(tmp));
-		d[strlen(tmp)] = 0;
+		if (dest[strlen(dest)-1] != '/') strcat(bufdir, "/");
+		strcat(bufdir, getFileName(src));
 
-		printf(1, "dir: %s\n", tmp);
-		printf(1, "mkdir: %s\n", bufdir);
 		mkdir(bufdir);
 
 		strcpy(buf, src);
@@ -159,11 +133,10 @@ void copy_recurse(char *src, char *dest) {
 			memmove(p, de.name, strlen(de.name));
 			p[strlen(de.name)] = 0;
 
-			fstat(open(buf, O_RDONLY), &st);
-			if (st.type == T_FILE)
-				copy_one(buf, bufdir);
-			else if (st.type == T_DIR)
+			if (isDirectory(buf))
 				copy_recurse(buf, bufdir);
+			else
+				copy_one(buf, bufdir);
 		}
 	}
 }
