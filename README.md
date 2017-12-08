@@ -14,4 +14,4 @@ Command to be implemented:
 - [x] cd
 - [ ] split
 - [ ] env
-- [ ] find
+- [x] find  =>  cuma find, belum ada option
