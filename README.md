@@ -12,6 +12,6 @@ Command to be implemented:
 - [x] rm
 - [x] rm -rf
 - [x] cd
-- [ ] split
+- [x] split -> cuma split -b
 - [ ] env
-- [x] find  =>  cuma find, belum ada option
+- [x] find  -> still buggy
